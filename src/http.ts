@@ -90,6 +90,11 @@ export class HttpClient {
     return response.data.data as T;
   }
 
+  async postRaw<T>(path: string, body?: unknown): Promise<T> {
+    const response = await this.axios.post(path, body);
+    return response.data as T;
+  }
+
   async put<T>(path: string, body?: unknown): Promise<T> {
     const response = await this.axios.put(path, body);
     return response.data.data as T;

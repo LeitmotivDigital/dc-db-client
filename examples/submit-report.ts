@@ -27,14 +27,14 @@ async function main() {
     total_energy_consumption_kwh: 52_000_000,
     it_energy_consumption_kwh: 32_000_000,
     total_renewable_energy_kwh: 40_000_000,
-    total_water_consumption_liters: 15_000_000,
+    total_water_input_m3: 15_000,
     total_servers: 8000,
-    pue: 1.35,
+    reported_pue: 1.35,
   });
   console.log('Created report:', report.id);
   console.log(`  Year: ${report.reporting_year}, Source: ${report.source_type}`);
   console.log(`  Energy: ${report.total_energy_consumption_kwh} kWh`);
-  console.log(`  PUE: ${report.pue}`);
+  console.log(`  PUE: ${report.reported_pue}`);
 
   // List all reports for this DC
   const reports = await client.dataCenters.reports(dataCenterId).list();

@@ -16,7 +16,7 @@ async function main() {
   let dc;
   try {
     dc = await client.dataCenters.create({
-      data_center_name: 'Example DC Amsterdam',
+      data_center_name: 'Example DC Amsterdam 2',
       data_center_type: 'Co-Location',
       operator_name: 'Example Corp',
       country: 'NL',
@@ -24,7 +24,7 @@ async function main() {
       latitude: 52.3676,
       longitude: 4.9041,
       total_power_capacity_kw: 10000,
-      total_floor_space_sqm: 5000,
+      floor_space_sqm: 5000,
       year_built: 2020,
     });
     console.log('Created data center:', dc.id);

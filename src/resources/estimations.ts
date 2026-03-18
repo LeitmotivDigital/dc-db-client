@@ -49,7 +49,7 @@ export class EstimationsResource {
 
   /** Trigger estimations for multiple (or all) data centers */
   async batch(data?: EstimationBatchCreate): Promise<BatchEstimationResult> {
-    return this.http.post<BatchEstimationResult>(
+    return this.http.postRaw<BatchEstimationResult>(
       '/api/v1/estimations/batch',
       data
     );
