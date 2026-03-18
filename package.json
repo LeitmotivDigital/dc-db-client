@@ -1,7 +1,13 @@
 {
-  "name": "dc-db-client",
-  "version": "0.1.0",
+  "name": "lm-dc-db-client",
+  "version": "1.0.1",
   "description": "TypeScript API client for the Data Center Database",
+  "author": "Leitmotiv <dev@leitmotiv.digital>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LeitmotivDigital/dc-db-client.git"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
