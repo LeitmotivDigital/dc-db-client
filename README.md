@@ -5,7 +5,7 @@ TypeScript API client for the Data Center Database.
 ## Installation
 
 ```bash
-npm install dc-db-client
+npm install lm-dc-db-client
 ```
 
 ## Quick Start
