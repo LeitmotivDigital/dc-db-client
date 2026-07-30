@@ -179,11 +179,21 @@ List estimations for a data center (newest first).
 **Query Parameters:**
 | Param | Type | Description |
 |-------|------|-------------|
-| `latest` | boolean | If true, return only the latest estimation |
+| `latest` | boolean | If true, return the latest estimation as a **single object**, not a page |
 | `source` | string | Filter by estimation_source |
 | `year` | number | Filter by reporting_year |
 | `page` | number | Page number |
 | `per_page` | number | Items per page |
+
+`latest=true` returns `{ "data": { ...estimation } }` and 404s when the data
+center has no estimation. Every other combination returns a paginated list.
+
+**Authorization:** Any valid API key.
+
+### `GET /api/v1/data-centers/:data_center_id/estimations/:id`
+
+Get one estimation of a data center. 404s if the estimation exists but belongs
+to a different data center, so the path cannot be used to read across records.
 
 **Authorization:** Any valid API key.
 
@@ -191,13 +201,24 @@ List estimations for a data center (newest first).
 
 List all estimations across data centers (for aggregate views).
 
-**Query Parameters:** Same as above, plus `data_center_id` filter.
+**Query Parameters:** Same as above, plus a `data_center_id` filter. Here
+`latest=true` reads the `latest_estimations` view and still returns a
+**paginated list** — the newest estimation per data center.
 
 **Authorization:** Any valid API key.
 
 ### `GET /api/v1/estimations/aggregates`
 
-Get pre-aggregated stats from latest estimations. This replaces the current 30+ individual stats endpoints for estimated data.
+Get pre-aggregated stats over the latest estimation per data center. This
+replaces the current 30+ individual stats endpoints for estimated data.
+
+**Query Parameters:** `year` — restrict to one reporting year.
+
+Unlike the other v1 endpoints this returns the aggregate object at the top
+level, not wrapped in `data`. `reporting_year` echoes the `year` filter and is
+`null` when unfiltered; `latest_batch_at` is `null` when there is nothing to
+aggregate. `average_density_kw_per_rack` divides IT power by racks derived from
+IT floor space at the engine's `sqmPerRack` assumption.
 
 **Response:**
 ```json

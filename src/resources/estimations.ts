@@ -27,6 +27,18 @@ export class DataCenterEstimationsResource {
     );
   }
 
+  /** Get a single estimation of this data center by ID */
+  async get(estimationId: string): Promise<DataCenterEstimation> {
+    return this.http.get<DataCenterEstimation>(
+      `${this.basePath}/${estimationId}`
+    );
+  }
+
+  /** Get the most recent estimation for this data center (404 if there is none) */
+  async latest(): Promise<DataCenterEstimation> {
+    return this.http.get<DataCenterEstimation>(this.basePath, { latest: true });
+  }
+
   /** Trigger an estimation for this data center */
   async create(data?: EstimationCreate): Promise<DataCenterEstimation> {
     return this.http.post<DataCenterEstimation>(this.basePath, data);

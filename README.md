@@ -19,11 +19,13 @@ const client = new DataCenterClient({
 });
 
 // List data centers
-const { data, pagination } = await client.dataCenters.list({ country: 'NL' });
+const { data, pagination } = await client.dataCenters.list({ country: 'Netherlands' });
 console.log(`Found ${pagination.total} data centers`);
 
-// Get a single data center with latest reports and estimation
+// Get a single data center — every column, all associated data,
+// plus the latest reports and estimation
 const dc = await client.dataCenters.get('dc-uuid');
+console.log(dc.sources, dc.tags, dc.notes, dc.tenants, dc.updates);
 console.log(dc.latest_reports, dc.latest_estimation);
 ```
 
@@ -44,7 +46,7 @@ const client = new DataCenterClient({
 ```typescript
 // List with filtering and pagination
 const result = await client.dataCenters.list({
-  country: 'NL',
+  country: 'Netherlands',
   type: 'Hyperscale',
   operator: 'equinix',
   search: 'amsterdam',
@@ -52,12 +54,63 @@ const result = await client.dataCenters.list({
   per_page: 50,
 });
 
+// Additional filters
+await client.dataCenters.list({
+  owner_type: 'Developer',              // Investor | Developer | Utility | Enterprise | Government | University
+  data_source_type: 'Research',         // EED | Research | Rumor
+  construction_status: 'topping_out',   // planning | groundbreaking | foundation_laid | topping_out | under_construction | completed
+  cooling_category: 'liquid-cooled (DLC)',
+  metro_region: 'Frankfurt',
+  tag: 'protest',                       // narrow with tag_type when a value exists under two types
+  tag_type: 'Civil Action',
+});
+
 // CRUD
-const dc = await client.dataCenters.create({ data_center_name: 'My DC', country: 'NL' });
+const dc = await client.dataCenters.create({ data_center_name: 'My DC', country: 'Netherlands' });
 const detail = await client.dataCenters.get(dc.id);
 const updated = await client.dataCenters.update(dc.id, { design_pue: 1.3 });
 await client.dataCenters.delete(dc.id);
 ```
+
+Every writable column is accepted by `create`/`update` and every column is
+returned by `list`/`get` — including the location detail (`metro_region`,
+`postal_code`, `site_area_hectares`), classification (`owner_type`,
+`data_source_type`, `construction_status`, `cooling_category`), lifecycle
+(`planned_commission_date`, `operational_probability_percentage`), and the
+per-data-center estimation overrides in `default_assumptions`.
+
+### Associated Data
+
+Notes, sources, tenants, tags, and source updates are **embedded in the data
+center response**, not fetched from separate endpoints.
+
+`get(id)` always returns all five:
+
+```typescript
+const dc = await client.dataCenters.get('dc-id');
+
+dc.notes;    // DataCenterNote[]         — editorial notes
+dc.sources;  // Source[]                 — external references (URL, publication, date)
+dc.tenants;  // DataCenterTenant[]       — known customers/occupants
+dc.tags;     // DataCenterTag[]          — { type, value, note } (Feature / Intended Use / Civil Action)
+dc.updates;  // DataCenterSourceUpdate[] — AI summaries of fetched sources, with `highlights`
+```
+
+`list()` embeds nothing by default so large pages stay cheap. Opt in with
+`include` — the relations are batch-fetched for the whole page, not per row:
+
+```typescript
+const { data } = await client.dataCenters.list({
+  country: 'Germany',
+  include: ['sources', 'tags'],   // or include: 'all'
+});
+
+data[0].sources;  // present
+data[0].notes;    // undefined — not requested
+```
+
+Because relations you did not ask for are absent (rather than empty arrays),
+`'notes' in dc` distinguishes "no notes" from "not requested".
 
 ### Reports
 
@@ -69,11 +122,15 @@ const report = await client.dataCenters.reports('dc-id').create({
   source_type: 'company',
   total_energy_consumption_kwh: 52_000_000,
 });
-await client.dataCenters.reports('dc-id').update(report.id, { pue: 1.35 });
+await client.dataCenters.reports('dc-id').get(report.id);
+await client.dataCenters.reports('dc-id').update(report.id, { reported_pue: 1.35 });
 await client.dataCenters.reports('dc-id').delete(report.id);
 
 // List reports across all data centers
 const allReports = await client.reports.list({ year: 2024, source_type: 'eed' });
+
+// …or scope the cross-DC listing to one data center
+const scoped = await client.reports.list({ data_center_id: 'dc-id', year: 2024 });
 ```
 
 ### Estimations
@@ -84,15 +141,29 @@ const estimation = await client.dataCenters.estimations('dc-id').create({
   reporting_year: 2024,
 });
 
-// List estimation history
-const history = await client.dataCenters.estimations('dc-id').list();
+// Query estimations of one data center
+const history = await client.dataCenters.estimations('dc-id').list({ year: 2024 });
+const one = await client.dataCenters.estimations('dc-id').get(estimation.id);
+const newest = await client.dataCenters.estimations('dc-id').latest();
+
+// Across all data centers (latest per data center, or a single data center)
+const allLatest = await client.estimations.list({ latest: true, year: 2024 });
+const forOne = await client.estimations.list({ data_center_id: 'dc-id' });
 
 // Batch estimation (all data centers)
 const batch = await client.estimations.batch({ reporting_year: 2024 });
 
-// Aggregated statistics
+// Aggregated statistics over the latest estimation per data center
 const stats = await client.estimations.aggregates({ year: 2024 });
 ```
+
+`latest()` returns a single estimation and throws `NotFoundError` when the data
+center has none. `list({ latest: true })` on the **global** resource returns a
+paginated list of the newest estimation per data center.
+
+A data center's `default_assumptions` feed into every estimation. Precedence,
+highest first: assumptions passed to `create()` → the data center's
+`default_assumptions` → the global defaults.
 
 ### API Keys (Admin)
 

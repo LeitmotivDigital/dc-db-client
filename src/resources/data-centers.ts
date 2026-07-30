@@ -12,17 +12,28 @@ import { DataCenterEstimationsResource } from './estimations.js';
 export class DataCentersResource {
   constructor(private http: HttpClient) {}
 
-  /** List all data centers with optional filtering and pagination */
+  /**
+   * List all data centers with optional filtering and pagination.
+   *
+   * Pass `include` to embed associated data in each row, e.g.
+   * `list({ include: ['sources', 'tags'] })`. Without it the rows carry the
+   * data center's own columns only.
+   */
   async list(
     params?: DataCenterListParams
   ): Promise<PaginatedList<DataCenter>> {
-    return this.http.getPaginated<DataCenter>(
-      '/api/v1/data-centers',
-      params as Record<string, unknown>
-    );
+    const { include, ...rest } = params ?? {};
+    return this.http.getPaginated<DataCenter>('/api/v1/data-centers', {
+      ...rest,
+      include: Array.isArray(include) ? include.join(',') : include,
+    });
   }
 
-  /** Get a single data center by ID, including latest reports and estimation */
+  /**
+   * Get a single data center by ID. The response carries every column, all
+   * associated data (notes, sources, tenants, tags, updates), plus the latest
+   * reports and the latest estimation.
+   */
   async get(id: string): Promise<DataCenterDetail> {
     return this.http.get<DataCenterDetail>(`/api/v1/data-centers/${id}`);
   }

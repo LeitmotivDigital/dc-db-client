@@ -33,9 +33,17 @@ List all data centers with filtering and pagination.
 | `type` | string | Filter by data_center_type enum value |
 | `operator` | string | Filter by operator_name (partial match) |
 | `status` | string | Filter by operational_status |
+| `owner_type` | string | Filter by owner_type enum value |
+| `data_source_type` | string | Filter by data_source_type enum value (EED / Research / Rumor) |
+| `construction_status` | string | Filter by construction_status enum value |
+| `cooling_category` | string | Filter by cooling_category enum value |
+| `metro_region` | string | Filter by metro_region (exact) |
+| `tag` | string | Filter to data centers carrying this tag value |
+| `tag_type` | string | Narrows `tag` when a value exists under more than one tag type |
 | `dismissed` | boolean | Filter by dismissed flag |
 | `corrected` | boolean | Filter by corrected flag |
 | `search` | string | Full-text search across name, operator, owner, city |
+| `include` | string | Comma-separated relations to embed: `notes`, `sources`, `tenants`, `tags`, `updates` — or `all` |
 
 **Response:**
 ```json
@@ -50,22 +58,37 @@ List all data centers with filtering and pagination.
 }
 ```
 
+Associated data is opt-in here so the default listing stays a single query.
+Requested relations are batch-fetched for the whole page (one query per
+relation, never per row). Relations that were not requested are **absent** from
+each row rather than empty, so callers can tell "none" from "not asked for".
+
 **Authorization:** Any valid API key (read-all).
 
 ### `GET /api/v1/data-centers/:id`
 
-Get a single data center by ID, including its latest reports and latest estimation.
+Get a single data center by ID. The detail response is the complete record:
+every column, all associated data, and the latest reports plus latest
+estimation. No `include` is needed — everything is always embedded.
 
 **Response:**
 ```json
 {
   "data": {
     ...data_center_fields,
+    "notes":   [ { "id": "…", "text": "…", "created_at": "…" } ],
+    "sources": [ { "id": "…", "url": "…", "publication_name": "…", "published_at": "…" } ],
+    "tenants": [ { "id": "…", "name": "…", "source": "Research" } ],
+    "tags":    [ { "tag_id": "…", "type": "Civil Action", "value": "protest", "note": "…" } ],
+    "updates": [ { "id": "…", "source_id": "…", "url": "…", "title": "…", "summary": "…", "highlights": {} } ],
     "latest_reports": [ { ...report_fields } ],
     "latest_estimation": { ...estimation_fields } | null
   }
 }
 ```
+
+`tags` flattens the `data_center_tags` link together with its `tags` vocabulary
+row, so consumers read `type`/`value` directly instead of a nested object.
 
 **Authorization:** Any valid API key.
 
@@ -122,6 +145,13 @@ Delete a data center and all associated reports and estimations (cascade).
 5. `tier_level` is optional; if provided, must be 1, 2, 3, or 4
 6. Numeric capacity fields must be non-negative when provided
 7. Location: if `lau_code` is provided, `latitude`/`longitude` are optional. If `lau_code` is not provided, `latitude` and `longitude` are required. When provided, `latitude` must be between -90 and 90; `longitude` between -180 and 180
+8. `operational_probability_percentage` must be between 0 and 100. It only means something while the site is not operational
+9. Enum columns are checked against their vocabulary: `owner_type`, `construction_status`, `cooling_category`, `data_source_type`
+10. `default_assumptions` is a partial map of known assumption keys to numbers. Unknown keys are **rejected** rather than dropped, so a typo cannot silently disable an override
+
+Every writable column of `data_centers` is accepted by create/update, and every
+column is returned on read. Adding a column to the table means adding it to
+`lib/api-validation-data-centers.ts`; reads need no change (`select('*')`).
 
 ## Implementation Notes
 
@@ -131,7 +161,16 @@ app/api/v1/data-centers/
   route.ts          -- GET (list), POST (create)
   [id]/
     route.ts        -- GET (single), PUT (update), DELETE
+
+lib/api-v1-embeds.ts -- `include` parsing + batch fetch of associated data
 ```
+
+### Associated Data
+Child records (`data_center_notes`, `sources`, `data_center_tenants`,
+`data_center_tags`, `data_center_updates`) have no endpoints of their own —
+they are embedded in the data-center response. `lib/api-v1-embeds.ts` fetches
+them with one query per relation for a whole page of ids, so embedding never
+turns into an N+1.
 
 ### Shared Middleware
 Authentication and authorization logic should be extracted into a shared middleware/utility:

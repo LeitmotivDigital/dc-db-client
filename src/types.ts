@@ -26,6 +26,36 @@ export type ReportSourceType =
   | 'government'
   | 'manual';
 
+/** Category of the owning entity — distinct from `DataCenterType` (market segment). */
+export type OwnerType =
+  | 'Investor'
+  | 'Developer'
+  | 'Utility'
+  | 'Enterprise'
+  | 'Government'
+  | 'University';
+
+/** Construction milestone for sites that are not yet operational. */
+export type ConstructionStatus =
+  | 'planning'
+  | 'groundbreaking'
+  | 'foundation_laid'
+  | 'topping_out'
+  | 'under_construction'
+  | 'completed';
+
+/** Controlled cooling classification; the raw detail stays in `cooling_type`. */
+export type CoolingCategory =
+  | 'Air-cooled'
+  | 'Air-cooled with adiabatic'
+  | 'liquid-cooled (DLC)'
+  | 'liquid-cooled (Immersion)';
+
+/** Provenance of the record itself (per-report provenance is `ReportSourceType`). */
+export type DataSourceType = 'EED' | 'Research' | 'Rumor';
+
+export type TagType = 'Feature' | 'Intended Use' | 'Civil Action';
+
 // ── Pagination ───────────────────────────────────────────────────────
 
 export interface PaginationInfo {
@@ -40,9 +70,90 @@ export interface PaginationParams {
   per_page?: number;
 }
 
+// ── Associated Data ──────────────────────────────────────────────────
+// Child records of a data center. They are embedded in the data-center
+// response rather than fetched from their own endpoints.
+
+/** An editorial note attached to a data center. */
+export interface DataCenterNote {
+  id: string;
+  data_center_id: string;
+  text: string;
+  created_by: string | null;
+  created_at: string | null;
+}
+
+/** An external reference (publication, article, petition) backing the record. */
+export interface Source {
+  id: string;
+  data_center_id: string;
+  /** Falls back to the URL host when not set. */
+  publication_name: string | null;
+  url: string;
+  published_at: string | null;
+  created_by: string | null;
+  created_at: string | null;
+}
+
+/** A known tenant/customer of a data center. */
+export interface DataCenterTenant {
+  id: string;
+  data_center_id: string;
+  name: string;
+  /** Provenance of the tenant claim, e.g. "Research". */
+  source: string;
+  created_by: string | null;
+  created_at: string | null;
+}
+
+/** A tag link, flattened together with its vocabulary entry. */
+export interface DataCenterTag {
+  tag_id: string;
+  type: TagType;
+  value: string;
+  /** Optional per-link detail, e.g. a protest description. */
+  note: string | null;
+  created_at: string | null;
+}
+
+/**
+ * An AI-generated summary of a fetched source, one per source.
+ * (Named `…SourceUpdate` to keep `DataCenterUpdate` meaning "update payload".)
+ */
+export interface DataCenterSourceUpdate {
+  id: string;
+  data_center_id: string;
+  source_id: string;
+  url: string;
+  publication_name: string | null;
+  title: string | null;
+  summary: string;
+  /** Structured extraction (owner, municipality, MW, space, …). */
+  highlights: Record<string, unknown> | null;
+  model: string | null;
+  created_at: string | null;
+}
+
+/** Relations that can be embedded via the `include` parameter. */
+export type DataCenterInclude =
+  | 'notes'
+  | 'sources'
+  | 'tenants'
+  | 'tags'
+  | 'updates';
+
+/** Embedded relations. Only the ones requested via `include` are present. */
+export interface DataCenterAssociations {
+  notes?: DataCenterNote[];
+  sources?: Source[];
+  tenants?: DataCenterTenant[];
+  tags?: DataCenterTag[];
+  updates?: DataCenterSourceUpdate[];
+}
+
 // ── Data Centers ─────────────────────────────────────────────────────
 
-export interface DataCenter {
+export interface DataCenter extends DataCenterAssociations {
   id: string;
   data_center_name: string;
   data_center_type: DataCenterType | null;
@@ -50,9 +161,15 @@ export interface DataCenter {
   operator_name: string | null;
   owner_name: string | null;
   owner_country: string | null;
+  owner_type: OwnerType | null;
+  /** Raw operator/investor string as reported (unsplit). */
+  guessed_owner_or_investor: string | null;
   country: string | null;
   region: string | null;
+  /** Metro/economic region, e.g. "Frankfurt", "Berlin-Brandenburg". */
+  metro_region: string | null;
   city: string | null;
+  postal_code: string | null;
   address: string | null;
   lau_code: string | null;
   latitude: number | null;
@@ -62,6 +179,8 @@ export interface DataCenter {
   floor_space_sqm: number | null;
   it_floor_space_sqm: number | null;
   office_floor_space_sqm: number | null;
+  /** Site/plot land area — distinct from the building's `floor_space_sqm`. */
+  site_area_hectares: number | null;
   total_power_capacity_kw: number | null;
   it_power_capacity_kw: number | null;
   utility_power_capacity_kw: number | null;
@@ -69,6 +188,7 @@ export interface DataCenter {
   electrical_redundancy: string | null;
   electrical_redundancy_details: string | null;
   cooling_type: string | null;
+  cooling_category: CoolingCategory | null;
   cooling_capacity_kw: number | null;
   cooling_redundancy: string | null;
   cooling_redundancy_details: string | null;
@@ -82,12 +202,22 @@ export interface DataCenter {
   year_built: number | null;
   year_last_renovation: number | null;
   operational_status: string | null;
+  /** 0–100 likelihood a non-operational site comes online; null once operational. */
+  operational_probability_percentage: number | null;
+  construction_status: ConstructionStatus | null;
   commissioning_date: string | null;
+  planned_commission_date: string | null;
   primary_energy_source: string | null;
   data_source: string | null;
+  data_source_type: DataSourceType | null;
   reporting_date: string | null;
   last_verified_date: string | null;
   override_density_power_kw_per_rack: number | null;
+  /**
+   * Per-data-center estimation assumption overrides. Merged over the global
+   * defaults and under any assumptions passed to an estimation call.
+   */
+  default_assumptions: EstimationAssumptions | null;
   missing: boolean;
   corrected: boolean;
   correction_note: string | null;
@@ -99,8 +229,16 @@ export interface DataCenter {
   updated_at: string;
 }
 
-/** DataCenter with nested latest data (returned by GET /data-centers/:id) */
+/**
+ * DataCenter as returned by GET /data-centers/:id — every column, all
+ * associated data, plus the latest reports and estimation.
+ */
 export interface DataCenterDetail extends DataCenter {
+  notes: DataCenterNote[];
+  sources: Source[];
+  tenants: DataCenterTenant[];
+  tags: DataCenterTag[];
+  updates: DataCenterSourceUpdate[];
   latest_reports: DataCenterReport[];
   latest_estimation: DataCenterEstimation | null;
 }
@@ -112,9 +250,13 @@ export interface DataCenterCreate {
   operator_name?: string;
   owner_name?: string;
   owner_country?: string;
+  owner_type?: OwnerType;
+  guessed_owner_or_investor?: string;
   country?: string;
   region?: string;
+  metro_region?: string;
   city?: string;
+  postal_code?: string;
   address?: string;
   lau_code?: string;
   latitude?: number;
@@ -124,6 +266,7 @@ export interface DataCenterCreate {
   floor_space_sqm?: number;
   it_floor_space_sqm?: number;
   office_floor_space_sqm?: number;
+  site_area_hectares?: number;
   total_power_capacity_kw?: number;
   it_power_capacity_kw?: number;
   utility_power_capacity_kw?: number;
@@ -131,6 +274,7 @@ export interface DataCenterCreate {
   electrical_redundancy?: string;
   electrical_redundancy_details?: string;
   cooling_type?: string;
+  cooling_category?: CoolingCategory;
   cooling_capacity_kw?: number;
   cooling_redundancy?: string;
   cooling_redundancy_details?: string;
@@ -144,12 +288,18 @@ export interface DataCenterCreate {
   year_built?: number;
   year_last_renovation?: number;
   operational_status?: string;
+  operational_probability_percentage?: number;
+  construction_status?: ConstructionStatus;
   commissioning_date?: string;
+  planned_commission_date?: string;
   primary_energy_source?: string;
   data_source?: string;
+  data_source_type?: DataSourceType;
   reporting_date?: string;
   last_verified_date?: string;
   override_density_power_kw_per_rack?: number;
+  /** Partial map of assumption key → number; unknown keys are rejected. */
+  default_assumptions?: EstimationAssumptions | null;
 }
 
 export type DataCenterUpdate = Partial<DataCenterCreate>;
@@ -159,9 +309,24 @@ export interface DataCenterListParams extends PaginationParams {
   type?: DataCenterType;
   operator?: string;
   status?: string;
+  owner_type?: OwnerType;
+  data_source_type?: DataSourceType;
+  construction_status?: ConstructionStatus;
+  cooling_category?: CoolingCategory;
+  metro_region?: string;
+  /** Filter to data centers carrying this tag value. */
+  tag?: string;
+  /** Narrows `tag` when the same value exists under more than one type. */
+  tag_type?: TagType;
   dismissed?: boolean;
   corrected?: boolean;
   search?: string;
+  /**
+   * Relations to embed in each row, e.g. `['sources', 'tags']` or `'all'`.
+   * Omitted by default so the list stays a single query; the detail endpoint
+   * always embeds everything.
+   */
+  include?: DataCenterInclude[] | 'all';
 }
 
 // ── Reports ──────────────────────────────────────────────────────────
@@ -242,10 +407,16 @@ export interface ReportListParams extends PaginationParams {
 
 export interface GlobalReportListParams extends ReportListParams {
   submitted_by?: string;
+  /** Narrow the cross-DC listing to a single data center. */
+  data_center_id?: string;
 }
 
 // ── Estimations ──────────────────────────────────────────────────────
 
+/**
+ * The assumption keys the estimation engine understands. Also the shape of a
+ * data center's `default_assumptions` overrides.
+ */
 export interface EstimationAssumptions {
   powerDensityBefore2000?: number;
   powerDensityBetween2000And2020?: number;
@@ -257,7 +428,6 @@ export interface EstimationAssumptions {
   serverPowerConsumption?: number;
   serverManufacturingGwp?: number;
   emissionFactorGramsCO2PerKwh?: number;
-  heatReuseEfficiency?: number;
 }
 
 export interface EstimationFlags {
@@ -312,13 +482,14 @@ export interface EstimationBatchCreate extends EstimationCreate {
 }
 
 export interface EstimationListParams extends PaginationParams {
-  latest?: boolean;
   source?: string;
   year?: number;
 }
 
 export interface GlobalEstimationListParams extends EstimationListParams {
   data_center_id?: string;
+  /** Return only the latest estimation per data center. */
+  latest?: boolean;
 }
 
 export interface EstimationAggregates {
@@ -333,9 +504,12 @@ export interface EstimationAggregates {
   total_server_manufacturing_gwp_tonnes: number;
   total_water_consumption_m3: number;
   capacity_utilization_percent: number;
-  reporting_year: number;
+  average_density_kw_per_rack: number;
+  /** Echoes the `year` filter; null when the request was unfiltered. */
+  reporting_year: number | null;
   estimation_count: number;
-  latest_batch_at: string;
+  /** null when there are no estimations to aggregate. */
+  latest_batch_at: string | null;
 }
 
 export interface BatchEstimationResult {
