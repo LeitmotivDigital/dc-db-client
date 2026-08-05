@@ -56,11 +56,12 @@ const result = await client.dataCenters.list({
 
 // Additional filters
 await client.dataCenters.list({
-  owner_type: 'Developer',              // Investor | Developer | Utility | Enterprise | Government | University
+  owner_type: 'Developer',              // Investor | Developer | Operator | Utility | Enterprise | Government | University
   data_source_type: 'Research',         // EED | Research | Rumor
   construction_status: 'topping_out',   // planning | groundbreaking | foundation_laid | topping_out | under_construction | completed
   cooling_category: 'liquid-cooled (DLC)',
   metro_region: 'Frankfurt',
+  expansion: true,                      // extra halls/phases on an existing campus, not a new build
   tag: 'protest',                       // narrow with tag_type when a value exists under two types
   tag_type: 'Civil Action',
 });
@@ -75,9 +76,9 @@ await client.dataCenters.delete(dc.id);
 Every writable column is accepted by `create`/`update` and every column is
 returned by `list`/`get` — including the location detail (`metro_region`,
 `postal_code`, `site_area_hectares`), classification (`owner_type`,
-`data_source_type`, `construction_status`, `cooling_category`), lifecycle
-(`planned_commission_date`, `operational_probability_percentage`), and the
-per-data-center estimation overrides in `default_assumptions`.
+`data_source_type`, `construction_status`, `cooling_category`, `expansion`),
+lifecycle (`planned_commission_date`, `operational_probability_percentage`), and
+the per-data-center estimation overrides in `default_assumptions`.
 
 ### Associated Data
 
@@ -90,7 +91,7 @@ center response**, not fetched from separate endpoints.
 const dc = await client.dataCenters.get('dc-id');
 
 dc.notes;    // DataCenterNote[]         — editorial notes
-dc.sources;  // Source[]                 — external references (URL, publication, date)
+dc.sources;  // Source[]                 — external references (URL, publication, date, archive)
 dc.tenants;  // DataCenterTenant[]       — known customers/occupants
 dc.tags;     // DataCenterTag[]          — { type, value, note } (Feature / Intended Use / Civil Action)
 dc.updates;  // DataCenterSourceUpdate[] — AI summaries of fetched sources, with `highlights`
@@ -111,6 +112,12 @@ data[0].notes;    // undefined — not requested
 
 Because relations you did not ask for are absent (rather than empty arrays),
 `'notes' in dc` distinguishes "no notes" from "not requested".
+
+Only sources a human has read and confirmed are published, so every `Source` you
+receive carries `state: 'verified'`. When a source is verified its page content
+is snapshotted, and `archived_at` (plus `archived_title`) records that capture —
+useful for citing a reference whose URL has since died or been rewritten. The
+archived text itself stays internal.
 
 ### Reports
 

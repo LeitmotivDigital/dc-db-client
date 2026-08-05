@@ -30,6 +30,8 @@ export type ReportSourceType =
 export type OwnerType =
   | 'Investor'
   | 'Developer'
+  /** Owner that also operates the facility itself. */
+  | 'Operator'
   | 'Utility'
   | 'Enterprise'
   | 'Government'
@@ -55,6 +57,13 @@ export type CoolingCategory =
 export type DataSourceType = 'EED' | 'Research' | 'Rumor';
 
 export type TagType = 'Feature' | 'Intended Use' | 'Civil Action';
+
+/**
+ * Review state of a source: `unreviewed` (nobody read it yet), `verified` (read
+ * and confirmed), `dismissed` (read and rejected). The API publishes verified
+ * sources only, so this is always `'verified'` on records you receive.
+ */
+export type SourceState = 'unreviewed' | 'verified' | 'dismissed';
 
 // ── Pagination ───────────────────────────────────────────────────────
 
@@ -91,6 +100,16 @@ export interface Source {
   publication_name: string | null;
   url: string;
   published_at: string | null;
+  /** Always `'verified'` — unreviewed and dismissed sources are not published. */
+  state: SourceState;
+  /** Page title from the archived capture, when one was taken. */
+  archived_title: string | null;
+  /**
+   * When the page content was snapshotted (on verification), so a dead or
+   * rewritten URL can still be evidenced. null when no capture exists. The
+   * archived content itself is internal and not exposed by the API.
+   */
+  archived_at: string | null;
   created_by: string | null;
   created_at: string | null;
 }
@@ -205,6 +224,11 @@ export interface DataCenter extends DataCenterAssociations {
   /** 0–100 likelihood a non-operational site comes online; null once operational. */
   operational_probability_percentage: number | null;
   construction_status: ConstructionStatus | null;
+  /**
+   * True when the record describes an expansion of an existing data
+   * center/campus (extra halls/phases) rather than a stand-alone new build.
+   */
+  expansion: boolean;
   commissioning_date: string | null;
   planned_commission_date: string | null;
   primary_energy_source: string | null;
@@ -290,6 +314,8 @@ export interface DataCenterCreate {
   operational_status?: string;
   operational_probability_percentage?: number;
   construction_status?: ConstructionStatus;
+  /** Defaults to false — an omitted flag means "not an expansion". */
+  expansion?: boolean;
   commissioning_date?: string;
   planned_commission_date?: string;
   primary_energy_source?: string;
@@ -314,6 +340,8 @@ export interface DataCenterListParams extends PaginationParams {
   construction_status?: ConstructionStatus;
   cooling_category?: CoolingCategory;
   metro_region?: string;
+  /** Only expansions of existing sites, or only stand-alone builds. */
+  expansion?: boolean;
   /** Filter to data centers carrying this tag value. */
   tag?: string;
   /** Narrows `tag` when the same value exists under more than one type. */
