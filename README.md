@@ -67,6 +67,9 @@ await client.dataCenters.list({
   tag_type: 'Civil Action',
 });
 
+// Dismissed records are excluded by default; `'all'` returns everything
+const everything = await client.dataCenters.list({ dismissed: 'all', per_page: 200 });
+
 // CRUD
 const dc = await client.dataCenters.create({ data_center_name: 'My DC', country: 'Netherlands' });
 const detail = await client.dataCenters.get(dc.id);

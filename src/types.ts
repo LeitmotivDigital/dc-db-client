@@ -352,7 +352,12 @@ export interface DataCenterListParams extends PaginationParams {
   tag?: string;
   /** Narrows `tag` when the same value exists under more than one type. */
   tag_type?: TagType;
-  dismissed?: boolean;
+  /**
+   * Dismissed records are excluded by default. `true` returns those alone,
+   * `'all'` returns active and dismissed together — the only way to get the
+   * complete list in one pass.
+   */
+  dismissed?: boolean | 'all';
   corrected?: boolean;
   search?: string;
   /**
