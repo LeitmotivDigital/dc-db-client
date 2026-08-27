@@ -58,6 +58,7 @@ const result = await client.dataCenters.list({
 await client.dataCenters.list({
   owner_type: 'Developer',              // Investor | Developer | Operator | Utility | Enterprise | Government | University
   data_source_type: 'Research',         // EED | Research | Rumor
+  data_source: 'Data Center Rebellion (Germany dataset)',  // the source's own label, matched exactly
   construction_status: 'topping_out',   // planning | groundbreaking | foundation_laid | topping_out | under_construction | completed
   cooling_category: 'liquid-cooled (DLC)',
   metro_region: 'Frankfurt',

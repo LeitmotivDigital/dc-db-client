@@ -337,6 +337,12 @@ export interface DataCenterListParams extends PaginationParams {
   status?: string;
   owner_type?: OwnerType;
   data_source_type?: DataSourceType;
+  /**
+   * The source's own label for the batch a record came from, e.g.
+   * `'Data Center Rebellion (Germany dataset)'`. Matched literally, not as a
+   * substring — importers write the label verbatim.
+   */
+  data_source?: string;
   construction_status?: ConstructionStatus;
   cooling_category?: CoolingCategory;
   metro_region?: string;
