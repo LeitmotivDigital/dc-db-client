@@ -32,10 +32,9 @@ List all data centers with filtering and pagination.
 | `country` | string | Filter by country |
 | `type` | string | Filter by data_center_type enum value |
 | `operator` | string | Filter by operator_name (partial match) |
-| `status` | string | Filter by operational_status |
+| `status` | string | Filter by `status` enum value (planned / groundbreaking / foundation_laid / topping_out / under_construction / operational / cancelled / paused); any other value is a 400 |
 | `owner_type` | string | Filter by owner_type enum value |
 | `data_source_type` | string | Filter by data_source_type enum value (EED / Research / Rumor) |
-| `construction_status` | string | Filter by construction_status enum value |
 | `cooling_category` | string | Filter by cooling_category enum value |
 | `metro_region` | string | Filter by metro_region (exact) |
 | `tag` | string | Filter to data centers carrying this tag value |
@@ -146,7 +145,7 @@ Delete a data center and all associated reports and estimations (cascade).
 6. Numeric capacity fields must be non-negative when provided
 7. Location: if `lau_code` is provided, `latitude`/`longitude` are optional. If `lau_code` is not provided, `latitude` and `longitude` are required. When provided, `latitude` must be between -90 and 90; `longitude` between -180 and 180
 8. `operational_probability_percentage` must be between 0 and 100. It only means something while the site is not operational
-9. Enum columns are checked against their vocabulary: `owner_type`, `construction_status`, `cooling_category`, `data_source_type`
+9. Enum columns are checked against their vocabulary: `owner_type`, `status`, `cooling_category`, `data_source_type`
 10. `default_assumptions` is a partial map of known assumption keys to numbers. Unknown keys are **rejected** rather than dropped, so a typo cannot silently disable an override
 
 Every writable column of `data_centers` is accepted by create/update, and every

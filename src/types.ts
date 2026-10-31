@@ -37,14 +37,21 @@ export type OwnerType =
   | 'Government'
   | 'University';
 
-/** Construction milestone for sites that are not yet operational. */
-export type ConstructionStatus =
-  | 'planning'
+/**
+ * Lifecycle status of a data center. The four build stages
+ * (`groundbreaking` → `foundation_laid` → `topping_out` →
+ * `under_construction`) are kept distinct; group them yourself if you want a
+ * coarser view.
+ */
+export type DataCenterStatus =
+  | 'planned'
   | 'groundbreaking'
   | 'foundation_laid'
   | 'topping_out'
   | 'under_construction'
-  | 'completed';
+  | 'operational'
+  | 'cancelled'
+  | 'paused';
 
 /** Controlled cooling classification; the raw detail stays in `cooling_type`. */
 export type CoolingCategory =
@@ -220,10 +227,9 @@ export interface DataCenter extends DataCenterAssociations {
   tier_certification_body: string | null;
   year_built: number | null;
   year_last_renovation: number | null;
-  operational_status: string | null;
+  status: DataCenterStatus | null;
   /** 0–100 likelihood a non-operational site comes online; null once operational. */
   operational_probability_percentage: number | null;
-  construction_status: ConstructionStatus | null;
   /**
    * True when the record describes an expansion of an existing data
    * center/campus (extra halls/phases) rather than a stand-alone new build.
@@ -311,9 +317,8 @@ export interface DataCenterCreate {
   tier_certification_body?: string;
   year_built?: number;
   year_last_renovation?: number;
-  operational_status?: string;
+  status?: DataCenterStatus | null;
   operational_probability_percentage?: number;
-  construction_status?: ConstructionStatus;
   /** Defaults to false — an omitted flag means "not an expansion". */
   expansion?: boolean;
   commissioning_date?: string;
@@ -334,7 +339,8 @@ export interface DataCenterListParams extends PaginationParams {
   country?: string;
   type?: DataCenterType;
   operator?: string;
-  status?: string;
+  /** One of the `DataCenterStatus` values; anything else is rejected with a 400. */
+  status?: DataCenterStatus;
   owner_type?: OwnerType;
   data_source_type?: DataSourceType;
   /**
@@ -343,7 +349,6 @@ export interface DataCenterListParams extends PaginationParams {
    * substring — importers write the label verbatim.
    */
   data_source?: string;
-  construction_status?: ConstructionStatus;
   cooling_category?: CoolingCategory;
   metro_region?: string;
   /** Only expansions of existing sites, or only stand-alone builds. */

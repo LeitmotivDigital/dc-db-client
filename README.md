@@ -59,7 +59,7 @@ await client.dataCenters.list({
   owner_type: 'Developer',              // Investor | Developer | Operator | Utility | Enterprise | Government | University
   data_source_type: 'Research',         // EED | Research | Rumor
   data_source: 'Data Center Rebellion (Germany dataset)',  // the source's own label, matched exactly
-  construction_status: 'topping_out',   // planning | groundbreaking | foundation_laid | topping_out | under_construction | completed
+  status: 'topping_out',                // planned | groundbreaking | foundation_laid | topping_out | under_construction | operational | cancelled | paused
   cooling_category: 'liquid-cooled (DLC)',
   metro_region: 'Frankfurt',
   expansion: true,                      // extra halls/phases on an existing campus, not a new build
@@ -80,7 +80,7 @@ await client.dataCenters.delete(dc.id);
 Every writable column is accepted by `create`/`update` and every column is
 returned by `list`/`get` — including the location detail (`metro_region`,
 `postal_code`, `site_area_hectares`), classification (`owner_type`,
-`data_source_type`, `construction_status`, `cooling_category`, `expansion`),
+`data_source_type`, `status`, `cooling_category`, `expansion`),
 lifecycle (`planned_commission_date`, `operational_probability_percentage`), and
 the per-data-center estimation overrides in `default_assumptions`.
 

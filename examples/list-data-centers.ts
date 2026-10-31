@@ -68,9 +68,9 @@ async function main() {
 
   const rumored = await client.dataCenters.list({
     data_source_type: 'Rumor',
-    construction_status: 'planning',
+    status: 'planned',
   });
-  console.log(`Rumored + still in planning: ${rumored.pagination.total}`);
+  console.log(`Rumored + still planned: ${rumored.pagination.total}`);
 
   // The detail response always carries everything
   const first = withSources.data[0];
